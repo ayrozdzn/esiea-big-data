@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard vente BMW</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+button.model-btn {
+    margin: 5px;
+    padding: 8px 12px;
+    border: none;
+    background-color: #3498db;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+}
+button.model-btn.active {
+    background-color: #2c3e50;
+}
+</style>
+</head>
+<body>
+<h1>Ventes par année</h1>
+
+<div id="buttonsContainer"></div>
+
+<canvas id="pieChart" width="800" height="400"></canvas>
+
+<script>
+let chart;
+
+// Récupère la liste des modèles uniques
+async function fetchModels() {
+    const res = await fetch('/api/models');
+    const models = await res.json();
+    const container = document.getElementById('buttonsContainer');
+
+    models.forEach(model => {
+        const btn = document.createElement('button');
+        btn.textContent = model;
+        btn.classList.add('model-btn');
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            fetchDataAndRender(model);
+        });
+        container.appendChild(btn);
+    });
+}
+
+// Récupère les données filtrées par modèle et construit un camembert par année
+async function fetchDataAndRender(model="Tous") {
+    const res = await fetch('/api/sales?model=' + model);
+    const counts = await res.json();
+
+    const years = Object.keys(counts).sort();
+    const data = Object.values(counts);
+
+    if(chart) chart.destroy();
+
+    const ctx = document.getElementById('pieChart').getContext('2d');
+    chart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: years,
+            datasets: [{
+                label: 'Nombre de ventes',
+                data: data,
+                backgroundColor: years.map((_,i) => `hsl(${i*30},70%,50%)`)
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+}
+
+// Init
+fetchModels().then(() => fetchDataAndRender());
+</script>
+</body>
+</html>
